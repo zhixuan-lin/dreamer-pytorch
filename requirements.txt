@@ -1,0 +1,10 @@
+omegaconf
+torch==1.10.0
+torchvision==0.11.1
+pyglet==1.5.21
+gym==0.21.0
+gym[accept-rom-license]
+git+git://github.com/denisyarats/dmc2gym.git
+imageio==2.13.1
+imageio-ffmpeg==0.4.5
+
