@@ -100,7 +100,7 @@ class Trainer:
         self.logdir = Path(self.config.logdir)
         self.video_dir = self.logdir / 'video'
         self.video_dir.mkdir(parents=True, exist_ok=True)
-        self.writer = SummaryWriter(log_dir=str(self.logdir.resolve()))
+        self.writer = SummaryWriter(log_dir=str(self.logdir / 'tb'))
 
         # Create environments.
         print('Creating environments...')
@@ -191,13 +191,14 @@ class Trainer:
         avg_length = float(np.mean(lengths))
         # Eval logging
         self.log(avg_return, avg_length, prefix='test')
+        self.writer.flush()
 
     def log(self, avg_return: float, avg_length: float, prefix: str):
-        prefix = colored(prefix, 'yellow' if prefix == 'train' else 'green')
+        colored_prefix = colored(prefix, 'yellow' if prefix == 'train' else 'green')
         elapsed_time = self.timer.split()
         total_time = datetime.timedelta(seconds=int(self.timer.total()))
         fps = self.global_frames / elapsed_time
-        print(f'{prefix:<14} | F: {self.global_frames} | E: {self.episodes} | R: {avg_return:.2f} | L: {avg_length:.2f} | FPS: {fps:.2f} | T: {total_time}')
+        print(f'{colored_prefix:<14} | F: {self.global_frames} | E: {self.episodes} | R: {avg_return:.2f} | L: {avg_length:.2f} | FPS: {fps:.2f} | T: {total_time}')
         metrics = [
             (f'{prefix}/return', avg_return),
             (f'{prefix}/length', avg_length),
@@ -205,7 +206,7 @@ class Trainer:
         ]
         for k, v in metrics:
             self.writer.add_scalar(k, v, global_step=self.global_frames)
-        with (self.logdir / 'f{prefix}_metrics.jsonl').open('a') as f:
+        with (self.logdir / f'{prefix}_metrics.jsonl').open('a') as f:
             f.write(json.dumps(dict([('step', self.global_frames)] + metrics)) + '\n')
 
     @property
