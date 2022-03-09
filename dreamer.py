@@ -84,6 +84,7 @@ class Dreamer:
 
     def get_action(self, obs: Dict[np.ndarray], state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
         """
+        Corresponds to Dreamer.__call__, but without training.
         Args:
             obs: obs['image'] shape (C, H, W), uint8
             state: None, or Tensor
@@ -92,6 +93,20 @@ class Dreamer:
             state: None, or Tensor
         """
         return self.action_space.sample(), None
+
+    def update(self, replay_buffer: ReplayBuffer):
+        """
+        Corresponds to Dreamer._train.
+
+        Update the model and policy/value. Log metrics and video.
+        """
+        pass
+
+    def write_log(self, step: int):
+        """
+        Corresponds to Dreamer._write_summaries
+        """
+        pass
 
     def policy(self, obs: Tensor, state: Tensor, training: bool) -> Tensor:
         """
@@ -113,11 +128,6 @@ class Dreamer:
         """
         pass
 
-    def update(self, replay_buffer: ReplayBuffer):
-        """
-        Update the model and policy/value.
-        """
-        pass
     
     def imagine_ahead(self, post: dict) -> Tensor:
         """
@@ -130,8 +140,6 @@ class Dreamer:
         """
         pass
 
-    def write_log(self, step: int):
-        pass
 
 class Trainer:
     def __init__(self, config: Config):
