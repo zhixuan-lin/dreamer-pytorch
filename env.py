@@ -1,4 +1,5 @@
 import gym
+from gym import spaces
 import imageio
 import logging
 import numpy as np
@@ -11,6 +12,7 @@ def make_dmc_env(name: str, action_repeat: int = 2, timelimit: int = 1000):
     env = RecordEpisodeStatistics(env)
     env = RecordVideo(env, fps=20)
     env = ActionRepeat(env, amount=action_repeat)
+    env = TransposeImage(env)
     env = RescaleAction(env, min_action=-1.0, max_action=1.0)
 
     return env
@@ -81,6 +83,20 @@ class ActionRepeat(gym.Wrapper):
             if done:
                 break
         return obs, total_reward, done, info
+
+class TransposeImage(gym.ObservationWrapper):
+
+    def __init__(self, env: gym.Env):
+        super().__init__(env)
+        assert env.observation_space.dtype == np.uint8
+        H, W, C = self.env.observation_space.shape
+        self.observation_space = spaces.Box(low=0, high=255, shape=(C, H, W), dtype=np.uint8)
+
+
+    def observation(self, obs: Dict[np.ndarray]) -> Dict[np.ndarray]:
+        assert obs['image'].shape[2] == 3
+        obs['image'] = obs['image'].transpose(2, 0, 1).copy()
+        return obs
 
 
 class DeepMindControl(gym.Env):

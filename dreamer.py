@@ -7,7 +7,7 @@ import gym
 from gym import spaces
 from omegaconf import OmegaConf
 import argparse
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 from env import make_env
@@ -76,18 +76,62 @@ class Config:
 
 class Dreamer:
     def __init__(self, config: Config, action_space: spaces.Box, writer: SummaryWriter):
-        # handle divice propertly!
         self.action_space = action_space
 
-    def get_action(self, obs: dict, state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
+    def build_model(self):
+        # handle divice propertly!
+        self.encoder = None
+
+    def get_action(self, obs: Dict[np.ndarray], state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
+        """
+        Args:
+            obs: obs['image'] shape (C, H, W), uint8
+            state: None, or Tensor
+        Returns:
+            action: (D)
+            state: None, or Tensor
+        """
         return self.action_space.sample(), None
 
+    def policy(self, obs: Tensor, state: Tensor, training: bool) -> Tensor:
+        """
+        Args:
+            obs: (B, C, H, W)
+            state: (B, D)
+        Returns:
+            action: (B, D)
+            state: (B, D)
+        """
+        return None, None
+
+    def exploration(self, action: Tensor, training: bool) -> Tensor:
+        """
+        Args:
+            action: (B, D)
+        Returns:
+            action: (B, D)
+        """
+        pass
+
     def update(self, replay_buffer: ReplayBuffer):
+        """
+        Update the model and policy/value.
+        """
+        pass
+    
+    def imagine_ahead(self, post: dict) -> Tensor:
+        """
+        Starting from a posterior, do rollout using your currenct policy.
+
+        Args:
+            post: dictionary of posterior state. Each (B, D)
+        Returns:
+            imag_feat: (T, B, D). concatenation of imagined posteiror states. 
+        """
         pass
 
     def write_log(self, step: int):
         pass
-    
 
 class Trainer:
     def __init__(self, config: Config):
