@@ -140,6 +140,9 @@ class ConvEncoder(nn.Module):
         x = self.act(self.conv2(x))
         x = self.act(self.conv3(x))
         x = self.act(self.conv4(x))
+        x = x.flatten(start_dim=-3)
+        assert x.size(-1) == 32 * self.depth
+        return x
 
 
 class ConvDncoder(nn.Module):
