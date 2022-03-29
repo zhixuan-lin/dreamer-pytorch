@@ -103,29 +103,6 @@ class RSSM(nn.Module):
     def device(self):
         return next(iter(self.parameters())).device
 
-def parallel_apply(func):
-    def wrapper(*args):
-        x = args[-1]
-        # reshape = False
-        # if x.ndim == 5:
-            # reshape = True
-        T, B, *OTHER = x.size()
-        x = x.view(T * B, *OTHER)
-        out = func(*args[:-1], x)
-        TB, *OTHER = out.size()
-        out = out.view(T, B, *OTHER)
-        return out
-    return wrapper
-
-class ParallelApply(nn.Module):
-    def __init__(self, mod):
-        super().__init__()
-        self.mod = mod
-
-    @parallel_apply
-    def forward(self, x):
-        return self.mod(x)
-
 class ConvEncoder(nn.Module):
     def __init__(self, depth: int = 32, act: nn.Module = nn.ReLU):
         super().__init__()
