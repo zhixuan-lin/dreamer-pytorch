@@ -15,14 +15,33 @@ class RSSM(nn.Module):
                  stoch: int = 30,
                  deter: int = 200,
                  hidden: int = 200,
+                 embed: int = 1024,
                  act: nn.Module = nn.ELU):
         super().__init__()
         self.activation = act
         self.stoch_size = stoch
         self.deter_size = deter
         self.hidden_size = hidden
-        self.cell = nn.GRUCell(input_size=action_space.shape[0] + stoch,
+        self.cell = nn.GRUCell(input_size=self.hidden_size,
                                hidden_size=self.deter_size)
+        self.act = act()
+
+        # action + state -> GRU input
+        self.fc_input = nn.Sequential(
+            nn.Linear(stoch + action_space.shape[0], hidden), self.act
+        )
+
+        # deter state -> next prior
+        self.fc_prior = nn.Sequential(
+            nn.Linear(deter, hidden), self.act,
+            nn.Linear(hidden, 2 * stoch), self.act,
+        )
+
+        # deter state + image -> next posterior
+        self.fc_post = nn.Sequential(
+            nn.Linear(deter + embed, hidden), self.act,
+            nn.Linear(hidden, 2 * stoch), self.act,
+        )
 
     def initial(self, batch_size: int):
         return dict(mean=torch.zeros(batch_size,
@@ -41,7 +60,7 @@ class RSSM(nn.Module):
         return torch.cat([state['stoch'], state['deter']], -1)
 
     def get_dist(self, state: dict):
-        return Normal(state['mean'], state['std'])
+        return Independent(Normal(state['mean'], state['std']), 1)
 
     def observe(self,
                 embed: Tensor,
@@ -58,7 +77,19 @@ class RSSM(nn.Module):
             post: dict, same key as initial(), each (B, T, D)
             prior: dict, same key as initial(), each (B, T, D)
         """
-        pass
+        B, T, D = action.size()
+        if state is None:
+            state = self.initial(B)
+        post_list = []
+        prior_list = []
+        for t in range(T):
+            state, post_state = self.obs_step(state, action[:, t], embed[:, t])
+            prior_list.append(state)
+            post_list.append(post_state)
+        prior = {k: torch.stack([state[k] for state in prior_list], dim=1) for k in prior_list[0]}
+        post = {k: torch.stack([state[k] for state in post_list], dim=1) for k in post_list[0]}
+        return prior, post
+
 
     def imagine(self, action: Tensor, state: Optional[Tensor] = None):
         """
@@ -71,11 +102,20 @@ class RSSM(nn.Module):
         Returns:
             prior: dict, same key as initial(), each (B, T, D)
         """
-        pass
+        B, T, D = action.size()
+        if state is None:
+            state = self.initial(B)
+        assert isinstance(state, dict)
+        prior_list = []
+        for t in range(T):
+            state = self.img_step(state, action[:, t])
+            prior_list.append(state)
+        prior = {k: torch.stack([state[k] for state in prior_list], dim=1) for k in prior_list[0]}
+        return prior
 
     def obs_step(self, prev_state: Tensor, prev_action: Tensor, embed: Tensor):
         """
-        Compute next prior and posterior previous prior and action
+        Compute next prior and posterior given previous prior and action
         Args:
             embed: (B,  D) embeded observations
             prev_action: (B,  D) actions. 
@@ -84,11 +124,18 @@ class RSSM(nn.Module):
             post: dict, same key as initial(), each (B, D)
             prior: dict, same key as initial(), each (B, D)
         """
-        pass
+        prior = self.img_step(prev_state, prev_action)
+        x = torch.cat([prior['deter'], embed], dim=-1)
+        x = self.fc_post(x)
+        mean, std = x.chunk(2, dim=-1)
+        std = F.softplus(std) + 0.1
+        stoch = self.get_dist(dict(mean=mean, std=std)).rsample()
+        post = dict(mean=mean, std=std, stoch=stoch, deter=prior['deter'])
+        return post, prior
 
-    def img_step(self, prev_state: Tensor, prev_action: Tensor, embed: Tensor):
+    def img_step(self, prev_state: Tensor, prev_action: Tensor):
         """
-        Compute next prior and posterior previous prior and action
+        Compute next prior given previous prior and action
         Args:
             embed: (B,  D) embeded observations
             prev_action: (B,  D) actions. 
@@ -97,7 +144,16 @@ class RSSM(nn.Module):
             post: dict, same key as initial(), each (B, D)
             prior: dict, same key as initial(), each (B, D)
         """
-        pass
+        x = torch.cat([prev_state['stoch'], prev_action], dim=-1)
+        x = self.fc_input(x)
+        x = deter = self.cell(x, prev_state['deter'])
+        x = self.fc_prior(x)
+        mean, std = x.chunk(2, dim=-1)
+        std = F.softplus(std) + 0.1
+        stoch = self.get_dist(dict(mean=mean, std=std)).rsample()
+        prior = dict(mean=mean, std=std, stoch=stoch, deter=deter)
+        return prior
+
 
     @property
     def device(self):
@@ -255,8 +311,23 @@ if __name__ == '__main__':
         input = torch.randn(4, 64)
         print(action_decoder(input).sample().size())
 
+    def test_rssm():
+        T = 10
+        B = 4
+        D = 5
+        action = torch.randn(B, T, D)
+        embed = torch.randn(B, T, 1024)
+        action_space = spaces.Box(low=-1, high=1, shape=(D,))
+        rssm = RSSM(action_space)
+        prior = rssm.imagine(action)
+        prior, post = rssm.observe(embed, action)
+        print(prior['deter'].size())
+        print(post['deter'].size())
+
+
 
 
     # test_conv()
     # test_dense()
-    test_action()
+    # test_action()
+    test_rssm()
