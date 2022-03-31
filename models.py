@@ -83,9 +83,10 @@ class RSSM(nn.Module):
         post_list = []
         prior_list = []
         for t in range(T):
-            state, post_state = self.obs_step(state, action[:, t], embed[:, t])
-            prior_list.append(state)
+            prior_state, post_state = self.obs_step(state, action[:, t], embed[:, t])
+            prior_list.append(prior_state)
             post_list.append(post_state)
+            state = post_state
         prior = {k: torch.stack([state[k] for state in prior_list], dim=1) for k in prior_list[0]}
         post = {k: torch.stack([state[k] for state in post_list], dim=1) for k in post_list[0]}
         return prior, post
