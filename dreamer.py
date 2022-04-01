@@ -34,6 +34,7 @@ class Config:
     steps: int = int(5e6)
     eval_every: int = int(1e4)
     video_every: int = int(1e4)
+    save_every: int = int(1e4)
     eval_episodes: int = 1
     log_every: int = int(1e3)
     log_scalars: bool = True
@@ -354,6 +355,9 @@ class Dreamer(nn.Module):
     def load(self, filename):
         pass
 
+    def save(self, filename):
+        pass
+
 
 class Trainer:
     def __init__(self, config: Config):
@@ -387,7 +391,7 @@ class Trainer:
 
         # Agent
         print('Creating agent...')
-        self.agent = Dreamer(self.c, self.train_env.action_space, self.writer, self.logdir)
+        self.agent = Dreamer(self.c, self.train_env.action_space, self.writer, self.logdir).to(self.c.device)
 
 
     def train(self):
@@ -437,6 +441,10 @@ class Trainer:
             # Evaluation
             if self.global_frames % self.c.eval_every == 0:
                 self.eval()
+
+            # Saving
+            if self.global_frames % self.c.save_every == 0:
+                self.agent.save(self.logdir / 'checkpoint.pth')
 
     def eval(self):
         print('Start evaluation')

@@ -7,4 +7,6 @@ gym[accept-rom-license]
 git+https://github.com/denisyarats/dmc2gym.git
 imageio==2.13.1
 imageio-ffmpeg==0.4.5
+tensorboard==2.8.0
+termcolor==1.1.0
 
