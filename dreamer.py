@@ -154,7 +154,7 @@ class Dreamer(nn.Module):
         data = self.preprocess_batch(data)
         # (B, T, D)
         embed = self.encoder(data)
-        post, prior = self.dynamics.observe(embed, data['action'])
+        prior, post = self.dynamics.observe(embed, data['action'])
         # (B, T, D)
         feat = self.dynamics.get_feat(post)
         # (B, T, 3, H, W), std=1.0
