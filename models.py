@@ -89,7 +89,7 @@ class RSSM(nn.Module):
             state = post_state
         prior = {k: torch.stack([state[k] for state in prior_list], dim=1) for k in prior_list[0]}
         post = {k: torch.stack([state[k] for state in post_list], dim=1) for k in post_list[0]}
-        return prior, post
+        return post, prior
 
 
     def imagine(self, action: Tensor, state: Optional[Tensor] = None):
