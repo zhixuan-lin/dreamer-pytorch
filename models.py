@@ -83,7 +83,7 @@ class RSSM(nn.Module):
         post_list = []
         prior_list = []
         for t in range(T):
-            prior_state, post_state = self.obs_step(state, action[:, t], embed[:, t])
+            post_state, prior_state = self.obs_step(state, action[:, t], embed[:, t])
             prior_list.append(prior_state)
             post_list.append(post_state)
             state = post_state
