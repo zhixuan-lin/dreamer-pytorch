@@ -234,7 +234,7 @@ class DenseDecoder(nn.Module):
         for i in range(layers):
             self.fc_layers.append(nn.Linear(input_dim, units))
             input_dim = units
-        self.fc_output = nn.Linear(units, np.prod(self.shape))
+        self.fc_output = nn.Linear(input_dim, int(np.prod(self.shape)))
 
 
     def forward(self, features: Tensor):

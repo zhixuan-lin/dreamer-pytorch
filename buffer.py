@@ -59,7 +59,7 @@ class ReplayBuffer:
         Args:
             length: number of observations, or transition + 1
         """
-        episodes = [self.sample_single_episode(length)]
+        episodes = [self.sample_single_episode(length) for _ in range(batch_size)]
         batch = {}
         for key in episodes[0]:
             batch[key] = np.array([ep[key] for ep in episodes])

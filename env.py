@@ -10,7 +10,7 @@ def make_dmc_env(name: str, action_repeat: int = 2, timelimit: int = 1000):
     env = DeepMindControl(name=name)
     env = TimeLimit(env, max_episode_steps=timelimit)
     env = RecordEpisodeStatistics(env)
-    env = RecordVideo(env, fps=20)
+    env = RecordVideo(env, fps=30)
     env = ActionRepeat(env, amount=action_repeat)
     env = TransposeImage(env)
     env = RescaleAction(env, min_action=-1.0, max_action=1.0)
@@ -88,12 +88,12 @@ class TransposeImage(gym.ObservationWrapper):
 
     def __init__(self, env: gym.Env):
         super().__init__(env)
-        assert env.observation_space.dtype == np.uint8
-        H, W, C = self.env.observation_space.shape
-        self.observation_space = spaces.Box(low=0, high=255, shape=(C, H, W), dtype=np.uint8)
+        assert self.observation_space['image'].dtype == np.uint8
+        H, W, C = self.observation_space['image'].shape
+        self.observation_space['image'] = spaces.Box(low=0, high=255, shape=(C, H, W), dtype=np.uint8)
 
 
-    def observation(self, obs: Dict[np.ndarray]) -> Dict[np.ndarray]:
+    def observation(self, obs: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         assert obs['image'].shape[2] == 3
         obs['image'] = obs['image'].transpose(2, 0, 1).copy()
         return obs
@@ -115,7 +115,7 @@ class DeepMindControl(gym.Env):
     @property
     def observation_space(self):
         spaces = {}
-        for key, value in self.env.observation_spec():
+        for key, value in self.env.observation_spec().items():
             spaces[key] = gym.spaces.Box(low=-np.inf, high=-np.inf, shape=value.shape, dtype=np.float32)
         spaces['image'] = gym.spaces.Box(low=0, high=255, shape=self.size + (3,), dtype=np.uint8)
         return gym.spaces.Dict(spaces=spaces)
