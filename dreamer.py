@@ -20,7 +20,7 @@ from torch.nn import functional as F
 from functools import partial
 import math
 from termcolor import colored
-from utils import Timer, AttrDict, freeze, AverageMeter
+from utils import Timer, AttrDict, freeze, AverageMeter,count_episodes
 from models import ConvDecoder, ConvEncoder, ActionDecoder, DenseDecoder, RSSM
 from torch.distributions import kl_divergence
 
@@ -99,6 +99,7 @@ class Dreamer(nn.Module):
         # self.metrics['expl_amount']
         self.writer = writer
         self.logdir = logdir
+        #self.step = self.count_steps(logdir,config) # Need to test and debug exploration and count episode
         self.build_model()
 
     def build_model(self):
@@ -309,8 +310,24 @@ class Dreamer(nn.Module):
             state: (B, D)
         """
 
-        # TODO: remember to preprocess input
-        return None, None
+       # If no state yet initialise tensors otherwise take input state
+       if state is None:
+            latent = self.dynamics.initial(len(obs['image']))
+            action = torch.zeros((len(obs['image']), self.actdim), dtype=torch.float32)
+        else:
+            latent, action = state
+
+        embed = self.encoder(self.preprocess_batch(obs, self.c))
+        latent, _ = self.dynamics.obs_step(latent, action, embed)
+        feat = self._dynamics.get_feat(latent)
+        # If training sample random actions if not pick most likely action 
+        if training:
+            action = self.actor(feat).sample()
+        else:
+            action = self.actor(feat).mode()
+        action = self.exploration(action, training)
+        state = (latent, action)
+        return action, state
 
     def exploration(self, action: Tensor, training: bool) -> Tensor:
         """
@@ -319,7 +336,28 @@ class Dreamer(nn.Module):
         Returns:
             action: (B, D)
         """
-        pass
+        if training:
+            amount = self.c.expl_amount
+            if self.c.expl_decay:
+                amount *= 0.5 ** (self.step / self.c.expl_decay)
+            if self.c.expl_min:
+                amount = max(self.c.expl_min, amount)
+            self.metrics['expl_amount'].update_state(amount)
+        elif self.c.eval_noise:
+            amount = self.c.eval_noise
+        else:
+            return action
+        if self.c.expl == 'additive_gaussian':
+            return torch.clamp(torch.normal(action, amount), -1, 1)
+        if self.c.expl == 'completely_random':
+            return torch.rand(action.shape, -1, 1)
+        if self.c.expl == 'epsilon_greedy':
+            indices = torch.distributions.Categorical(0 * action).sample()
+            return torch.where(
+                torch.rand(action.shape[:1], 0, 1) < amount,
+                torch.one_hot(indices, action.shape[-1], dtype=self._float),
+                action)
+        raise NotImplementedError(self.c.expl)
 
     
     def imagine_ahead(self, post: dict) -> Tensor:
@@ -351,6 +389,8 @@ class Dreamer(nn.Module):
         imag_feat = self.dynamics.get_feat(states)
         return imag_feat
 
+    def count_steps(logdir, config):
+      return utils.count_episodes(logdir)[1] * config.action_repeat 
 
     def load(self, filename):
         pass

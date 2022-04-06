@@ -60,3 +60,11 @@ def freeze(module: nn.Module):
     finally:
         for p, state in zip(module.parameters(), prev_states):
             p.requires_grad_(state)
+
+
+
+def count_episodes(directory):
+    filenames = directory.glob('*.npz')
+    lengths = [int(n.stem.rsplit('-', 1)[-1]) - 1 for n in filenames]
+    episodes, steps = len(lengths), sum(lengths)
+    return episodes, steps
