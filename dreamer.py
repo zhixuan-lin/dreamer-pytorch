@@ -143,7 +143,7 @@ class Dreamer(nn.Module):
             action: (D)
             state: None, or Tensor
         """
-        return self.action_space.sample(), None
+        return self.policy(obs,state,training) #self.action_space.sample(),None 
 
     def update(self, replay_buffer: ReplayBuffer, log_images: bool, video_path: Path):
         """
@@ -152,6 +152,7 @@ class Dreamer(nn.Module):
         Update the model and policy/value. Log metrics and video.
         """
         data = replay_buffer.sample(self.c.batch_size, self.c.batch_length)
+        print(data)
         data = self.preprocess_batch(data)
         # (B, T, D)
         embed = self.encoder(data)
@@ -287,6 +288,11 @@ class Dreamer(nn.Module):
         data['reward'] = clip_rewards(data['reward'])
         return data
 
+    def preprocess_image(self, obs: np.ndarray):
+        obs = obs / 255.0 - 0.5
+        obs = torch.from_numpy(obs)
+        return obs
+
     def write_log(self, step: int):
         """
         Corresponds to Dreamer._write_summaries
@@ -311,15 +317,15 @@ class Dreamer(nn.Module):
         """
 
        # If no state yet initialise tensors otherwise take input state
-       if state is None:
-            latent = self.dynamics.initial(len(obs['image']))
-            action = torch.zeros((len(obs['image']), self.actdim), dtype=torch.float32)
+        if state is None:
+            latent = self.dynamics.initial(len(obs))
+            action = torch.zeros((len(obs), self.actdim), dtype=torch.float32)
         else:
             latent, action = state
 
-        embed = self.encoder(self.preprocess_batch(obs, self.c))
+        embed = self.encoder(self.preprocess_image(obs))
         latent, _ = self.dynamics.obs_step(latent, action, embed)
-        feat = self._dynamics.get_feat(latent)
+        feat = self.dynamics.get_feat(latent)
         # If training sample random actions if not pick most likely action 
         if training:
             action = self.actor(feat).sample()
@@ -355,7 +361,7 @@ class Dreamer(nn.Module):
             indices = torch.distributions.Categorical(0 * action).sample()
             return torch.where(
                 torch.rand(action.shape[:1], 0, 1) < amount,
-                torch.one_hot(indices, action.shape[-1], dtype=self._float),
+                torch.one_hot(indices, action.shape[-1], dtype=self.float),
                 action)
         raise NotImplementedError(self.c.expl)
 
@@ -369,6 +375,7 @@ class Dreamer(nn.Module):
         Returns:
             imag_feat: (T, B, D). concatenation of imagined posteiror states. 
         """
+
         if self.c.pcont:
             # (B, T, D)
             # last state may be terminal. Terminal's next discount prediction is not trained.
@@ -500,8 +507,9 @@ class Trainer:
             obs = self.test_env.reset()
             agent_state = None
             done = False
+            print(obs)
             while True:
-                action, agent_state = self.agent.get_action(obs, agent_state, training=False)
+                action, agent_state = self.agent.get_action(obs['image'], agent_state, training=False)
                 obs, reward, done, info = self.test_env.step(action)
                 if done:
                     assert 'episode' in info
