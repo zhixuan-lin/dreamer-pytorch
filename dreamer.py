@@ -23,6 +23,7 @@ from termcolor import colored
 from utils import Timer, AttrDict, freeze, AverageMeter,count_episodes
 from models import ConvDecoder, ConvEncoder, ActionDecoder, DenseDecoder, RSSM
 from torch.distributions import kl_divergence
+from itertools import chain
 
 @dataclass
 class Config:
@@ -168,7 +169,7 @@ class Dreamer(nn.Module):
 
 
         # Actor loss
-        with freeze(self.model_modules):
+        with freeze(chain(self.model_modules, self.value)):
             # (H + 1, BT, D), indexed t = 0 to H, includes the 
             # start state unlike original implementation
             imag_feat = self.imagine_ahead(post)
