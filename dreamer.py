@@ -47,7 +47,7 @@ class Config:
     parallel: str = 'none'
     action_repeat: int = 2
     time_limit: int = 1000
-    prefill: int = 1000
+    prefill: int = 5000
     eval_noise: float = 0.0
     clip_rewards: str = 'none'
     # Model.
@@ -308,7 +308,9 @@ class Dreamer(nn.Module):
         """
         # Add T and B dimension for a single action
         obs['image'] = np.expand_dims(np.expand_dims(obs['image'],axis=0),axis=0)
-        return self.policy(obs,state,training)#self.action_space.sample(),None
+        action, state = self.policy(obs,state,training)#self.action_space.sample(),None
+        action = action.squeeze(axis=0)
+        return action, state
 
     def policy(self, obs: Tensor, state: Tensor, training: bool) -> Tensor:
         """
