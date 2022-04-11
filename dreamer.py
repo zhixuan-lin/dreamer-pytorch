@@ -295,6 +295,7 @@ class Dreamer(nn.Module):
         self.writer.flush()
 
 
+    @torch.no_grad()
     def get_action(self, obs: Dict[str, np.ndarray], state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
         """
         Corresponds to Dreamer.__call__, but without training.
