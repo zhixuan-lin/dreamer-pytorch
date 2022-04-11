@@ -47,7 +47,7 @@ class Config:
     parallel: str = 'none'
     action_repeat: int = 2
     time_limit: int = 1000
-    prefill: int = 5000
+    prefill: int = 1000
     eval_noise: float = 0.0
     clip_rewards: str = 'none'
     # Model.
@@ -133,20 +133,7 @@ class Dreamer(nn.Module):
 
 
 
-    def get_action(self, obs: Dict[str, np.ndarray], state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
-        """
-        Corresponds to Dreamer.__call__, but without training.
-        Args:
-            obs: obs['image'] shape (C, H, W), uint8
-            state: None, or Tensor
-        Returns:
-            action: (D)
-            state: None, or Tensor
-        """
-        obs['image'] = np.expand_dims(np.expand_dims(obs['image'],axis=0),axis=0)
-
-        return self.policy(obs,state,training) #self.action_space.sample(),None#self.policy(obs,state,training)
-
+    
     def update(self, replay_buffer: ReplayBuffer, log_images: bool, video_path: Path):
         """
         Corresponds to Dreamer._train.
@@ -289,6 +276,11 @@ class Dreamer(nn.Module):
         data['reward'] = clip_rewards(data['reward'])
         return data
 
+    def preprocess_observation(self, obs: Dict[str, np.ndarray]):
+        obs = {k: torch.as_tensor(v, device=self.c.device, dtype=torch.float) for k, v in obs.items()}
+        obs['image'] = obs['image'] / 255.0 - 0.5
+        return obs
+
     def write_log(self, step: int):
         """
         Corresponds to Dreamer._write_summaries
@@ -302,6 +294,21 @@ class Dreamer(nn.Module):
         # print(colored(f'[{step}]', 'red'), ' / '.join(f'{k} {v:.1f}' for k, v in metrics))
         self.writer.flush()
 
+
+    def get_action(self, obs: Dict[str, np.ndarray], state: Optional[Tensor] = None, training: bool = True) -> Tuple[np.ndarray, Optional[Tensor]]:
+        """
+        Corresponds to Dreamer.__call__, but without training.
+        Args:
+            obs: obs['image'] shape (C, H, W), uint8
+            state: None, or Tensor
+        Returns:
+            action: (D)
+            state: None, or Tensor
+        """
+        # Add T and B dimension for a single action
+        obs['image'] = np.expand_dims(np.expand_dims(obs['image'],axis=0),axis=0)
+        return self.policy(obs,state,training)#self.action_space.sample(),None
+
     def policy(self, obs: Tensor, state: Tensor, training: bool) -> Tensor:
         """
         Args:
@@ -311,18 +318,14 @@ class Dreamer(nn.Module):
             action: (B, D)
             state: (B, D)
         """
-        obs['reward'] = 0
-        obs['action'] = 0
-        obs['discount'] = 0
 
        # If no state yet initialise tensors otherwise take input state
         if state is None:
             latent = self.dynamics.initial(len(obs['image']))
-            action = torch.zeros((len(obs['image']), self.actdim), dtype=torch.float32).to('cuda:0')
+            action = torch.zeros((len(obs['image']), self.actdim), dtype=torch.float32).to(self.c.device)
         else:
             latent, action = state
-
-        embed = self.encoder(self.preprocess_batch(obs))
+        embed = self.encoder(self.preprocess_observation(obs))
         embed = embed.squeeze(0)
         latent, _ = self.dynamics.obs_step(latent, action, embed)
         feat = self.dynamics.get_feat(latent)
@@ -330,10 +333,11 @@ class Dreamer(nn.Module):
         if training:
             action = self.actor(feat).sample()
         else:
-            action = self.actor(feat).sample()
+            action = self.actor(feat).sample() 
         action = self.exploration(action, training)
         state = (latent, action)
         action = action.cpu().detach().numpy()
+        action = np.array(action,dtype="float32")
         return action, state
 
     def exploration(self, action: Tensor, training: bool) -> Tensor:
@@ -401,10 +405,19 @@ class Dreamer(nn.Module):
       return utils.count_episodes(logdir)[1] * config.action_repeat 
 
     def load(self, filename):
+        # TODO
+        #[torch.load(model, filename+str(model)) for model in self.model_modules]
         pass
-
+    # Change to state dict if we just want to save the weights
     def save(self, filename):
-        pass
+        # Save each model in filename
+        [torch.save(model, str(filename)+str(model.__class__.__name__)) for model in self.model_modules]
+        # Save the run's configuration
+        with open(str(filename)+'_config_param.txt', 'w') as f:
+            f.write((str([self.c.__getattr__(attr) for attr in dir(self.c) if not attr.startswith('__')])))
+            f.close()
+
+
 
 
 class Trainer:
@@ -492,7 +505,9 @@ class Trainer:
 
             # Saving
             if self.global_frames % self.c.save_every == 0:
-                self.agent.save(self.logdir / 'checkpoint.pth')
+                #self.agent.save(self.logdir / 'checkpoint.pth')
+                self.agent.save(self.logdir)
+                
 
     def eval(self):
         print('Start evaluation')
@@ -506,6 +521,7 @@ class Trainer:
                 self.test_env.start_recording()
 
             obs = self.test_env.reset()
+
            
             agent_state = None
             done = False
