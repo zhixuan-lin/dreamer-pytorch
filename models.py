@@ -34,13 +34,13 @@ class RSSM(nn.Module):
         # deter state -> next prior
         self.fc_prior = nn.Sequential(
             nn.Linear(deter, hidden), self.act,
-            nn.Linear(hidden, 2 * stoch), self.act,
+            nn.Linear(hidden, 2 * stoch)
         )
 
         # deter state + image -> next posterior
         self.fc_post = nn.Sequential(
             nn.Linear(deter + embed, hidden), self.act,
-            nn.Linear(hidden, 2 * stoch), self.act,
+            nn.Linear(hidden, 2 * stoch)
         )
 
     def initial(self, batch_size: int):
