@@ -217,10 +217,15 @@ class Dreamer(nn.Module):
         self.value_optimizer.step()
 
         if self.c.log_scalars:
+            reward_data = data['reward'].mean()
+            reward_post = reward_pred.mean.mean()
+            reward_img = reward.mean()
+            avg_value = value_pred.mean.mean()
+            avg_return = returns.mean()
             self.scalar_summaries(
                 data, feat, prior_dist, post_dist, likes, div,
                 model_loss, value_loss, actor_loss, model_norm, value_norm,
-                actor_norm)
+                actor_norm, reward_data, reward_post, reward_img, avg_value, avg_return)
         if log_images:
             self.image_summaries(data, embed, image_pred, video_path)
 
@@ -228,7 +233,7 @@ class Dreamer(nn.Module):
     def scalar_summaries(
           self, data, feat, prior_dist, post_dist, likes, div,
           model_loss, value_loss, actor_loss, model_norm, value_norm,
-          actor_norm):
+          actor_norm, reward_data, reward_post, reward_img, avg_value, avg_return):
         self.metrics['model_grad_norm'].update_state(model_norm)
         self.metrics['value_grad_norm'].update_state(value_norm)
         self.metrics['actor_grad_norm'].update_state(actor_norm)
@@ -241,6 +246,12 @@ class Dreamer(nn.Module):
         self.metrics['value_loss'].update_state(value_loss)
         self.metrics['actor_loss'].update_state(actor_loss)
         self.metrics['action_ent'].update_state(self.actor(feat).base_dist.base_dist.entropy().sum(dim=-1).mean())
+
+        self.metrics['reward_data'].update_state(reward_data)
+        self.metrics['reward_post'].update_state(reward_post)
+        self.metrics['reward_img'].update_state(reward_img)
+        self.metrics['avg_value'].update_state(avg_value)
+        self.metrics['avg_return'].update_state(avg_return)
 
     @torch.no_grad()
     def image_summaries(self, data, embed, image_pred, video_path):
