@@ -336,7 +336,9 @@ class Dreamer(nn.Module):
         if training:
             action = self.actor(feat).sample()
         else:
-            action = self.actor(feat).sample() 
+            # action = self.actor(feat).sample() 
+            # TODO this is dirty
+            action = torch.tanh(self.actor(feat).base_dist.mean)
         action = self.exploration(action, training)
         state = (latent, action)
         action = action.cpu().detach().numpy()
