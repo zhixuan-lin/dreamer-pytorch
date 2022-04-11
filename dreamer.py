@@ -171,6 +171,7 @@ class Dreamer(nn.Module):
         with freeze(nn.ModuleList([self.model_modules, self.value])):
             # (H + 1, BT, D), indexed t = 0 to H, includes the 
             # start state unlike original implementation
+            # NVM, now it is (H, BT, D)
             imag_feat = self.imagine_ahead(post)
             reward = self.reward(imag_feat[1:]).mean
             if self.c.pcont:
@@ -184,7 +185,7 @@ class Dreamer(nn.Module):
             # For t = 0 to H - 1
             returns = torch.zeros_like(value)
             last = value[-1]
-            for t in reversed(range(self.c.horizon)):
+            for t in reversed(range(self.c.horizon - 1)):
                 returns[t] = (reward[t] + pcont[t] * (
                     (1. - self.c.disclam) * value[t] + self.c.disclam * last))
                 last = returns[t]
@@ -338,7 +339,7 @@ class Dreamer(nn.Module):
         else:
             # action = self.actor(feat).sample() 
             # TODO this is dirty
-            action = torch.tanh(self.actor(feat).base_dist.mean)
+            action = torch.tanh(self.actor(feat).base_dist.base_dist.mean)
         action = self.exploration(action, training)
         state = (latent, action)
         action = action.cpu().detach().numpy()
@@ -395,7 +396,8 @@ class Dreamer(nn.Module):
         start = {k: flatten(v).detach() for k, v in post.items()}
         state = start
 
-        state_list = [start]
+        # state_list = [start]
+        state_list = []
         for i in range(self.c.horizon):
             # This is what the original implementation does
             action = self.actor(self.dynamics.get_feat(state).detach()).rsample()
