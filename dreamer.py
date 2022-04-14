@@ -42,7 +42,7 @@ class Config:
     gpu_growth: bool = True
     precision: int = 16
     # Environment.
-    task: str = 'dmc:cartpole_balance'
+    task: str = 'cartpole_balance'
     envs: int = 1
     parallel: str = 'none'
     action_repeat: int = 2

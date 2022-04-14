@@ -20,14 +20,9 @@ def make_dmc_env(name: str, action_repeat: int = 2, timelimit: int = 1000):
 def make_env(task: str, **kwargs):
     """
     Args:
-        task: something like 'dmc:cartpole_swingup'
+        task: something like 'cartpole_swingup'
     """
-    assert ':' in task
-    kind, name = task.split(':')
-    if kind == 'dmc':
-        return make_dmc_env(name=name, **kwargs)
-    else:
-        raise ValueError(f'Unsupported environment type {kind}')
+    return make_dmc_env(name=task, **kwargs)
 
 class RecordVideo(gym.Wrapper):
     def __init__(self, env: gym.Env, fps: Optional[int] = None, render_kwargs: dict={}):
