@@ -10,7 +10,7 @@ import gym
 from gym import spaces
 from omegaconf import OmegaConf
 import argparse
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Union
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 from env import make_env
@@ -20,7 +20,7 @@ from torch.nn import functional as F
 from functools import partial
 import math
 from termcolor import colored
-from utils import Timer, AttrDict, freeze, AverageMeter,count_episodes
+from utils import Timer, AttrDict, freeze, AverageMeter
 from models import ConvDecoder, ConvEncoder, ActionDecoder, DenseDecoder, RSSM
 from torch.distributions import kl_divergence
 
@@ -31,7 +31,7 @@ class Config:
     logdir: str = './output/'
     comment: str = ''
     seed: int = 0
-    steps: int = int(5e6)
+    steps: int = int(1e6)
     eval_every: int = int(1e4)
     video_every: int = int(1e4)
     save_every: int = int(1e4)
@@ -407,19 +407,19 @@ class Dreamer(nn.Module):
         imag_feat = self.dynamics.get_feat(states)
         return imag_feat
 
-    def load(self, filename):
-        # TODO
-        #[torch.load(model, filename+str(model)) for model in self.model_modules]
-        pass
-    # Change to state dict if we just want to save the weights
-    def save(self, filename):
-        # Save each model in filename
-        [torch.save(model, str(filename)+str(model.__class__.__name__)) for model in self.model_modules]
-        # Save the run's configuration
-        with open(str(filename)+'_config_param.txt', 'w') as f:
-            f.write((str([self.c.__getattr__(attr) for attr in dir(self.c) if not attr.startswith('__')])))
-            f.close()
+    def load(self, path: Union[str, Path], device: str = 'auto'):
+        if device == 'auto':
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        path = Path(path)
+        with path.open('wb') as f:
+            self.load_state_dict(torch.load(f, map_location=device))
 
+    # Change to state dict if we just want to save the weights
+    def save(self, path: Union[str, Path]):
+        path = Path(path)
+        path.parent.mkdir(exist_ok=True, parents=True)
+        with path.open('wb') as f:
+            torch.save(self.state_dict(), f)
 
 
 
@@ -508,8 +508,7 @@ class Trainer:
 
             # Saving
             if self.global_frames % self.c.save_every == 0:
-                #self.agent.save(self.logdir / 'checkpoint.pth')
-                self.agent.save(self.logdir)
+                self.agent.save(self.logdir / 'checkpoint.pth')
                 
 
     def eval(self):
