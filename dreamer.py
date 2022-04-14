@@ -407,9 +407,6 @@ class Dreamer(nn.Module):
         imag_feat = self.dynamics.get_feat(states)
         return imag_feat
 
-    def count_steps(logdir, config):
-      return utils.count_episodes(logdir)[1] * config.action_repeat 
-
     def load(self, filename):
         # TODO
         #[torch.load(model, filename+str(model)) for model in self.model_modules]
