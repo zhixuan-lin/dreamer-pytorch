@@ -35,7 +35,7 @@ class Config:
     eval_every: int = int(1e4)
     video_every: int = int(1e4)
     save_every: int = int(1e4)
-    eval_episodes: int = 1
+    eval_episodes: int = 5
     log_every: int = int(1e3)
     log_scalars: bool = True
     log_images: bool = True
@@ -308,8 +308,8 @@ class Dreamer(nn.Module):
             state: None, or Tensor
         """
         # Add T and B dimension for a single action
-        obs['image'] = np.expand_dims(np.expand_dims(obs['image'],axis=0),axis=0)
-        action, state = self.policy(obs,state,training)#self.action_space.sample(),None
+        obs['image'] = obs['image'][None, None, ...]
+        action, state = self.policy(obs, state, training)#self.action_space.sample(),None
         action = action.squeeze(axis=0)
         return action, state
 
@@ -343,7 +343,7 @@ class Dreamer(nn.Module):
         action = self.exploration(action, training)
         state = (latent, action)
         action = action.cpu().detach().numpy()
-        action = np.array(action,dtype="float32")
+        action = np.array(action, dtype=np.float32)
         return action, state
 
     def exploration(self, action: Tensor, training: bool) -> Tensor:
@@ -509,6 +509,9 @@ class Trainer:
             # Saving
             if self.global_frames % self.c.save_every == 0:
                 self.agent.save(self.logdir / 'checkpoint.pth')
+                with (self.logdir / 'checkpoint_step.txt').open('w') as f:
+                    print(self.global_frames, file=f)
+
                 
 
     def eval(self):

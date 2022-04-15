@@ -1,4 +1,5 @@
-omegaconf
+dm_control==1.0.2
+omegaconf==2.1.1
 torch==1.10.0
 torchvision==0.11.1
 pyglet==1.5.21

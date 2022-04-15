@@ -1,6 +1,14 @@
 # dreamer-pytorch
 IFT6163 course project, PyTorch reimplementation of the Dreamer model
 
+## Dependency
+
+```sh
+conda create -n dreamer-pytorch python=3.8
+conda activate dreamer-pytorch
+pip install -r requirements.txt
+```
+
 ## Training
 
 ```sh

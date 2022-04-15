@@ -1,8 +1,11 @@
 # Byte-compiled / optimized / DLL files
 .psync
+scripts/*
 output/
+output_exps/
 data/
 notes.md
+run.sh
 __pycache__/
 *.py[cod]
 *$py.class
