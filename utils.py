@@ -2,6 +2,22 @@ import time
 import datetime
 from contextlib import contextmanager
 from torch import nn, Tensor
+import torch
+from typing import Optional
+import numpy as np
+import random
+
+def set_seed(seed: Optional[int], determinisitc: bool = True):
+    if seed is not None:
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+    if determinisitc:
+        # torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
 
 class AttrDict(dict):
 

@@ -20,7 +20,7 @@ from torch.nn import functional as F
 from functools import partial
 import math
 from termcolor import colored
-from utils import Timer, AttrDict, freeze, AverageMeter
+from utils import Timer, AttrDict, freeze, AverageMeter, set_seed
 from models import ConvDecoder, ConvEncoder, ActionDecoder, DenseDecoder, RSSM
 from torch.distributions import kl_divergence
 
@@ -31,6 +31,7 @@ class Config:
     logdir: str = './output/'
     comment: str = ''
     seed: int = 0
+    deterministic: bool = False  # True if you getting OOM
     steps: int = int(1e6)
     eval_every: int = int(1e4)
     video_every: int = int(1e4)
@@ -429,6 +430,7 @@ class Trainer:
         self.setup()
 
     def setup(self):
+        set_seed(self.c.seed, self.c.deterministic)
         # Loggin
         name = self.c.task
         if self.c.comment:
