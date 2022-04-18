@@ -85,6 +85,9 @@ class Config:
     expl_amount: float = 0.3
     expl_decay: float = 0.0
     expl_min: float = 0.0
+    # Ablations.
+    update_horizon: Optional[int] = None  # policy value after this horizon are not updated
+
 
 act_dict = {
     'relu': nn.ReLU,
@@ -200,8 +203,12 @@ class Dreamer(nn.Module):
 
         # Value loss
         target = returns.detach()
-        value_pred = self.value(imag_feat[:-1].detach())
-        value_loss = torch.mean(-value_pred.log_prob(target) * mask, dim=[0, 1])
+        if self.c.update_horizon is None:
+            value_pred = self.value(imag_feat[:-1].detach())
+            value_loss = torch.mean(-value_pred.log_prob(target) * mask, dim=[0, 1])
+        else:
+            value_pred = self.value(imag_feat[:self.c.update_horizon].detach())
+            value_loss = torch.mean(-value_pred.log_prob(target[:self.c.update_horizon]) * mask[:self.c.update_horizon], dim=[0, 1])
 
         self.model_optimizer.zero_grad(set_to_none=True)
         self.value_optimizer.zero_grad(set_to_none=True)
@@ -399,8 +406,12 @@ class Dreamer(nn.Module):
 
         state_list = [start]
         for i in range(self.c.horizon):
-            # This is what the original implementation does
-            action = self.actor(self.dynamics.get_feat(state).detach()).rsample()
+            if self.c.update_horizon is not None and i >= self.c.update_horizon:
+                with torch.no_grad():
+                    action = self.actor(self.dynamics.get_feat(state).detach()).rsample()
+            else:
+                # This is what the original implementation does. State is detached
+                action = self.actor(self.dynamics.get_feat(state).detach()).rsample()
             state = self.dynamics.img_step(state, action)
             state_list.append(state)
         # (H, BT, D)
