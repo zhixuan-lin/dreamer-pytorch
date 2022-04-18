@@ -87,6 +87,7 @@ class Config:
     expl_min: float = 0.0
     # Ablations.
     update_horizon: Optional[int] = None  # policy value after this horizon are not updated
+    single_step_q: bool = False  # Use 1-step target as an estimate of q.
 
 
 act_dict = {
@@ -197,8 +198,14 @@ class Dreamer(nn.Module):
                 # mask[t] -> state[t] is terminal or after a terminal state
                 mask = torch.cat([torch.ones_like(pcont[:1]), torch.cumprod(pcont, dim=0)[:-1]], dim=0)
 
-            # Really weird stuff here. Actor[t] will receive many gradient. But anyway
-            actor_loss = -(mask * returns).mean(dim=[0, 1])
+            if not self.c.single_step_q:
+                # Really weird stuff here. Actor[t] will receive many gradient. But anyway
+                actor_loss = -(mask * returns).mean(dim=[0, 1])
+            else:
+                q_estimates = torch.zeros_like(value)
+                for t in range(self.c.horizon):
+                    q_estimates[t] = reward[t] + pcont[t] * value[t]
+                actor_loss = -(mask * q_estimates).mean(dim=[0, 1])
 
 
         # Value loss
@@ -412,8 +419,12 @@ class Dreamer(nn.Module):
             else:
                 # This is what the original implementation does. State is detached
                 action = self.actor(self.dynamics.get_feat(state).detach()).rsample()
+
             state = self.dynamics.img_step(state, action)
             state_list.append(state)
+            if self.c.single_step_q:
+                # Necessary, if you are using single step q estimate
+                state = {k: v.detach() for k, v in state.items()}
         # (H, BT, D)
         states = {k: torch.stack([state[k] for state in state_list], dim=0) for k in state_list[0]}
         imag_feat = self.dynamics.get_feat(states)
