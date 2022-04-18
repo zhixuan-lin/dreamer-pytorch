@@ -1,6 +1,11 @@
 # dreamer-pytorch
 IFT6163 course project, PyTorch reimplementation of the Dreamer model
 
+## OOM
+
+If you are getting OOM errors, pass `deterministic=True`. This sets `torch.backends.cudnn.deterministic=True`, which
+uses more memory-efficient algorithms for convolution.
+
 ## Dependency
 
 ```sh
