@@ -88,6 +88,8 @@ class Config:
     # Ablations.
     update_horizon: Optional[int] = None  # policy value after this horizon are not updated
     single_step_q: bool = False  # Use 1-step target as an estimate of q.
+    # Additional
+    tf_init: bool = False
 
 
 act_dict = {
@@ -136,7 +138,12 @@ class Dreamer(nn.Module):
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.c.actor_lr,
                                           weight_decay=self.c.weight_decay)
 
-
+        if self.c.tf_init:
+            for m in self.modules():
+                if isinstance(m, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+                    nn.init.xavier_uniform_(m.weight.data)
+                    if hasattr(m.bias, 'data'):
+                        m.bias.data.fill_(0.0)
 
     
     def update(self, replay_buffer: ReplayBuffer, log_images: bool, video_path: Path):
