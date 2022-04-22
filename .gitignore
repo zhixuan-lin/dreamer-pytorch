@@ -1,8 +1,10 @@
 # Byte-compiled / optimized / DLL files
+figures/
 scores/
 results/
 .psync
 scripts/*
+!scripts/plot.py
 output/
 output_exps/
 data/
