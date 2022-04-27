@@ -40,12 +40,9 @@ class Config:
     log_every: int = int(1e3)
     log_scalars: bool = True
     log_images: bool = True
-    gpu_growth: bool = True
-    precision: int = 16
     # Environment.
     task: str = 'cartpole_balance'
     envs: int = 1
-    parallel: str = 'none'
     action_repeat: int = 2
     time_limit: int = 1000
     prefill: int = 5000
@@ -63,13 +60,11 @@ class Config:
     kl_scale: float = 1.0
     pcont_scale: float = 10.0
     weight_decay: float = 0.0
-    weight_decay_pattern: str = r'.*'
     # Training.
     batch_size: int = 50
     batch_length: int = 50
     train_every: int = 1000
     train_steps: int = 100
-    pretrain: int = 100
     model_lr: float = 6e-4
     value_lr: float = 8e-5
     actor_lr: float = 8e-5

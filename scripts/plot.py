@@ -454,8 +454,8 @@ def load_single_step_q():
         for single_step_q in single_step_qs:
             data_seeds = []
             for seed in seeds:
-                if task == 'walker_walk' and seed == 1:
-                    continue
+                # if task == 'walker_walk' and seed == 1:
+                    # continue
                 pattern = f'*{task}*seed={seed},single_step_q={single_step_q}-*/test_metrics.jsonl'
                 data_seed = load_data(logdir, pattern, keys=['step', 'test/return'])
                 data_seeds.append(data_seed)
@@ -522,7 +522,7 @@ if __name__ == '__main__':
     os.makedirs('figures/', exist_ok=True)
     # plot_results()
     # plot_update_horizon()
-    # plot_single_step_q()
+    plot_single_step_q()
     # plot_dreamer_tf2()
 
     data = dict(
