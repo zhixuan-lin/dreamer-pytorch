@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-figures/
+debug/
 scores/
 results/
 .psync
