@@ -30,7 +30,7 @@ class Config:
     device: str = 'auto'
     logdir: str = './output/'
     comment: str = ''
-    seed: int = 0
+    seed: Optional[int] = None
     deterministic: bool = False  # True if you getting OOM
     steps: int = int(1e6)
     eval_every: int = int(1e4)
