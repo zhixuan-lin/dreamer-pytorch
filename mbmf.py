@@ -20,7 +20,7 @@ from torch.nn import functional as F
 from functools import partial
 import math
 from termcolor import colored
-from utils import Timer, AttrDict, freeze, AverageMeter, set_seed
+from dreamer_utils import Timer, AttrDict, freeze, AverageMeter, set_seed
 from models import ConvDecoder, ConvEncoder, ActionDecoder, DenseDecoder, RSSM
 from torch.distributions import kl_divergence
 
