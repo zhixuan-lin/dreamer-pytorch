@@ -32,12 +32,12 @@ class Config:
     comment: str = ''
     seed: Optional[int] = None
     deterministic: bool = False  # True if you getting OOM
-    steps: int = 1000
-    eval_every: int = 200
-    video_every: int = 200
-    save_every: int = 200
-    eval_episodes: int = 1
-    log_every: int = 200
+    steps: int = int(1e6)
+    eval_every: int = int(1e4)
+    video_every: int = int(1e4)
+    save_every: int = int(1e4)
+    eval_episodes: int = 5
+    log_every: int = int(1e3)
     log_scalars: bool = True
     log_images: bool = True
     # Environment.
@@ -614,10 +614,9 @@ def main():
 
     # Load commnad line configuration
     config = OmegaConf.merge(config, OmegaConf.from_cli(remaining))
-    # Save config
-    #OmegaConf.save(config, 'dreamer_config.yaml') 
+
     trainer = Trainer(config)
-    trainer.train() 
+    trainer.train()
 
 if __name__ == '__main__':
     main()

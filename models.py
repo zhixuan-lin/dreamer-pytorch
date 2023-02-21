@@ -299,7 +299,7 @@ if __name__ == '__main__':
         input = torch.randn(4, 3, 3, 64, 64)
         feature = encoder(dict(image=input))
         output = decoder(feature)
-        print(feature.shape)
+
         assert input.size() == output.base_dist.mean.size()
 
     def test_dense():
@@ -328,7 +328,7 @@ if __name__ == '__main__':
 
 
 
-    test_conv()
-    #test_dense()
-    #test_action()
-    #test_rssm()
+    # test_conv()
+    # test_dense()
+    # test_action()
+    test_rssm()
